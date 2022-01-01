@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { BaseCanvas } from './libs/BaseCanvas'
+import { ButtonGeometry } from './MyGeometry/ButtonGeometry'
 import { Pane } from 'tweakpane'
 import { gsap } from 'gsap'
 import perlin_3d from '../shader/chunk/perlin_3d.glsl?raw'
@@ -12,7 +13,7 @@ export class Canvas extends BaseCanvas {
     constructor(audioManager)
     {
         super({
-            axesHelper: true,
+            // axesHelper: true,
             // gridHelper: true,
             orbitControls: true,
             // autoResize: true,
@@ -49,7 +50,8 @@ export class Canvas extends BaseCanvas {
          * Colors
          */
         const COLORS = {
-            clearColor:   0x9ddaff,
+            // clearColor:   0x9ddaff,
+            clearColor:   0xbf4545,
             globalColor:  0x32e6e6,
             depthColor:   0x52bbf4,
             surfaceColor: 0x9bd8ff,
@@ -76,6 +78,16 @@ export class Canvas extends BaseCanvas {
         // this.gui_sphere = this.gui.addFolder('sphere').open(false)
         // this.gui_sphere.addColor(this.mySphere.material.uniforms.uGlobalColor, 'value').name('globalColor')
         // this.gui_sphere.add(this.mySphere.material.uniforms.uLightDirection.value, 'x').min(-1).max(1).step(0.01)
+
+        /**
+         * Button
+         */
+        const buttonGeometry = new ButtonGeometry(4, 2, 32)
+        const buttonMaterial = new THREE.MeshBasicMaterial({
+            color: 'lightgreen',
+        })
+        const buttonMesh = new THREE.Mesh(buttonGeometry, buttonMaterial)
+        this.scene.add(buttonMesh)
 
         /**
          * Sea
@@ -136,31 +148,18 @@ export class Canvas extends BaseCanvas {
 
         // Material
         const standardMaterial = new THREE.MeshStandardMaterial({ flatShading: true })
+        // const standardMaterial = new THREE.MeshLambertMaterial()
 
-        /**
-         * Cones
-         */
+        // Cones
         const coneMesh = new THREE.Mesh(
             new THREE.ConeGeometry(0.1, 0.2, 8,1),
             standardMaterial
         )
         this.cones = []
         this.createSurroundingObjects(coneMesh, this.cones, 0)
-        this.cones.forEach(cone => {
-            gsap.to(cone.position, {
-                y: "+=.1",
-                duration: 3,
-                repeat: -1,
-                yoyo: true,
-                ease: 'sine.inOut',
-            })
-        })
         this.objectsAround.add(...this.cones)
 
-
-        /**
-         * Cylinders
-         */
+        // Cylinders
         const cylinderMesh = new THREE.Mesh(
             new THREE.CylinderGeometry(0.05, 0.05, 0.2, 8, 1),
             standardMaterial
@@ -169,9 +168,7 @@ export class Canvas extends BaseCanvas {
         this.createSurroundingObjects(cylinderMesh, this.cylinders, 0.25 * 1 / 3)
         this.objectsAround.add(...this.cylinders)
 
-        /**
-         * Spheres
-         */
+        // Spheres
         const sphereMesh = new THREE.Mesh(
             new THREE.SphereGeometry(0.1, 8, 8),
             standardMaterial
@@ -184,7 +181,7 @@ export class Canvas extends BaseCanvas {
          * Lights
          */
         this.ambientLight = new THREE.AmbientLight('white', 0.1)
-        this.directionalLight_upper = new THREE.DirectionalLight('lightBlue', 1)
+        this.directionalLight_upper  = new THREE.DirectionalLight('lightBlue', 1)
         this.directionalLight_lowerA = new THREE.DirectionalLight('yellow', 1)
         this.directionalLight_lowerB = new THREE.DirectionalLight('blue', 1)
         this.directionalLight_upper.position.set(0, -1, 0)
@@ -194,7 +191,7 @@ export class Canvas extends BaseCanvas {
             this.ambientLight,
             this.directionalLight_upper,
             this.directionalLight_lowerA,
-            this.directionalLight_lowerB,
+            // this.directionalLight_lowerB,
         )
 
         /**
@@ -203,11 +200,15 @@ export class Canvas extends BaseCanvas {
         window.addEventListener('mousemove', this.getNormalizedMousePosition.bind(this))
         window.addEventListener('resize', this.onResize.bind(this))
 
+        /**
+         * Renderer settings
+         */
         // this.renderer.autoClearColor = false
         this.renderer.setClearColor(COLORS.clearColor)
         this.gui.addColor(COLORS, 'clearColor').onChange(() => {
             this.renderer.setClearColor(COLORS.clearColor)
         })
+
         this.clock = new THREE.Clock()
         this.animate()
     }
@@ -219,6 +220,8 @@ export class Canvas extends BaseCanvas {
     {
         this.controls.update()
 
+        const elapsedTime = this.clock.getElapsedTime()
+
         // this.mouseUpdate()
 
         let amplitudes = this.audioManager.getAmplitudes()
@@ -226,7 +229,15 @@ export class Canvas extends BaseCanvas {
         this.PARAMS.volume = amplitudes[0]
         this.sea.material.uniforms.uSynthAmplitude.value = amplitudes[0]
 
-        const elapsedTime = this.clock.getElapsedTime()
+        for (const obj of this.cylinders) {
+            obj.scale.setScalar(1 + amplitudes[0])
+        }
+        for (const obj of this.spheres) {
+            obj.scale.setScalar(1 + amplitudes[1])
+        }
+        for (const obj of this.cones) {
+            obj.scale.setScalar(1 + amplitudes[2])
+        }
 
         // this.mySphere.rotation.y += 0.01
         // const invMat = this.mySphere.matrixWorld.clone().invert()
