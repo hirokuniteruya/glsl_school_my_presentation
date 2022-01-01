@@ -52,7 +52,7 @@ export class BaseCanvas {
         this.camera.position.set(...Object.values(DEFAULT_CAM_POS))
 
         /* Renderer */
-        this.renderer = new THREE.WebGL1Renderer({ antialias: true, alpha: true })
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
         this.renderer.setSize(this.sizes.width, this.sizes.height)
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
         this.renderer.setClearColor(0x000000)
