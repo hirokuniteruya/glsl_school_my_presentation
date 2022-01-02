@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { CSS3DObject } from 'three/examples/jsm/renderers/CSS3DRenderer'
 import { BaseCanvas } from './libs/BaseCanvas'
 import { ButtonGeometry } from './MyGeometry/ButtonGeometry'
 import { Pane } from 'tweakpane'
@@ -20,8 +21,6 @@ export class Canvas extends BaseCanvas {
         })
 
         this.audioManager = audioManager
-
-        this.volumeMonitor = document.getElementById('volume')
 
         this.dampedMouse = new THREE.Vector2()
 
@@ -49,45 +48,14 @@ export class Canvas extends BaseCanvas {
         /**
          * Colors
          */
-        const COLORS = {
-            // clearColor:   0x9ddaff,
-            clearColor:   0xbf4545,
+        this.COLORS = {
             globalColor:  0x32e6e6,
             depthColor:   0x52bbf4,
             surfaceColor: 0x9bd8ff,
+            // clearColor:   0x9ddaff,
+            clearColor:   0xbf4545,
+            outsideClearColor: 0x333333,
         }
-
-        /**
-         * MySphere
-         */
-        // this.mySphere = new THREE.Mesh(
-        //     new THREE.SphereGeometry(1, 32, 32),
-        //     new THREE.RawShaderMaterial({
-        //         vertexShader: main_vs,
-        //         fragmentShader: main_fs,
-        //         uniforms: {
-        //             uLightDirection: { value: new THREE.Vector3(1, 0, 1) },
-        //             uTime: { value: 0 },
-        //             uGlobalColor: { value: new THREE.Color(COLORS.globalColor) },
-        //             invMatrix: { value: new THREE.Matrix4() }
-        //         }
-        //     })
-        // )
-        // this.scene.add(this.mySphere)
-
-        // this.gui_sphere = this.gui.addFolder('sphere').open(false)
-        // this.gui_sphere.addColor(this.mySphere.material.uniforms.uGlobalColor, 'value').name('globalColor')
-        // this.gui_sphere.add(this.mySphere.material.uniforms.uLightDirection.value, 'x').min(-1).max(1).step(0.01)
-
-        /**
-         * Button
-         */
-        const buttonGeometry = new ButtonGeometry(4, 2, 32)
-        const buttonMaterial = new THREE.MeshBasicMaterial({
-            color: 'lightgreen',
-        })
-        const buttonMesh = new THREE.Mesh(buttonGeometry, buttonMaterial)
-        this.scene.add(buttonMesh)
 
         /**
          * Sea
@@ -109,8 +77,8 @@ export class Canvas extends BaseCanvas {
                     uSmallWavesFrequency: { value: 3 },
                     uSmallWavesSpeed: { value: 0.2 },
 
-                    uDepthColor: { value: new THREE.Color(COLORS.depthColor) },
-                    uSurfaceColor: { value: new THREE.Color(COLORS.surfaceColor) },
+                    uDepthColor: { value: new THREE.Color(this.COLORS.depthColor) },
+                    uSurfaceColor: { value: new THREE.Color(this.COLORS.surfaceColor) },
                     uColorOffset: { value: 0.21 },
                     uColorMultiplier: { value: 6 },
 
@@ -195,6 +163,49 @@ export class Canvas extends BaseCanvas {
         )
 
         /**
+         * Outside world
+         */
+        this.renderTarget = new THREE.WebGLRenderTarget(this.sizes.width, this.sizes.height)
+        // this.renderTarget = new THREE.WebGLRenderTarget(this.sizes.width, this.sizes.width)
+        this.outsideScene = new THREE.Scene()
+        this.outsideCamera = new THREE.PerspectiveCamera(60, this.sizes.aspect, 0.1, 1000)
+        this.outsideCamera.position.set(0, 0, 5)
+
+        /**
+         * Button
+         */
+        const buttonMesh = new THREE.Mesh(
+            new ButtonGeometry(4, 1.8, 32),
+            new THREE.MeshBasicMaterial({
+                color: 'white',
+                map: this.renderTarget.texture,
+            })
+        )
+        this.outsideScene.add(buttonMesh)
+
+        /**
+         * Text: play
+         */
+        const textEl = document.createElement('p')
+        textEl.innerText = 'PLAY'
+        textEl.style.fontSize = '10px'
+        textEl.style.color = 'white'
+        textEl.style.fontFamily = 'Poppins'
+        textEl.style.pointerEvents = 'none' // 何故か効かない
+        this.textObject = new CSS3DObject(textEl)
+        this.textObject.scale.multiplyScalar(0.08)
+        this.outsideScene.add(this.textObject)
+
+        /**
+         * Debug plane
+         */
+        this.debugPlane = new THREE.Mesh(
+            new THREE.PlaneGeometry(),
+            new THREE.MeshBasicMaterial({ map: this.renderTarget.texture })
+        )
+        this.outsideScene.add(this.debugPlane)
+
+        /**
          * Event listeners
          */
         window.addEventListener('mousemove', this.getNormalizedMousePosition.bind(this))
@@ -204,10 +215,11 @@ export class Canvas extends BaseCanvas {
          * Renderer settings
          */
         // this.renderer.autoClearColor = false
-        this.renderer.setClearColor(COLORS.clearColor)
-        this.gui.addColor(COLORS, 'clearColor').onChange(() => {
-            this.renderer.setClearColor(COLORS.clearColor)
+        this.renderer.setClearColor(this.COLORS.clearColor)
+        this.gui.addColor(this.COLORS, 'clearColor').onChange(() => {
+            this.renderer.setClearColor(this.COLORS.clearColor)
         })
+        this.gui.addColor(this.COLORS, 'outsideClearColor')
 
         this.clock = new THREE.Clock()
         this.animate()
@@ -239,15 +251,18 @@ export class Canvas extends BaseCanvas {
             obj.scale.setScalar(1 + amplitudes[2])
         }
 
-        // this.mySphere.rotation.y += 0.01
-        // const invMat = this.mySphere.matrixWorld.clone().invert()
-        // this.mySphere.material.uniforms.invMatrix.value = invMat
-
         this.sea.material.uniforms.uTime.value = elapsedTime
 
         this.objectsAround.rotation.y += 0.001
 
+        this.renderer.setRenderTarget(this.renderTarget)
+        this.renderer.setClearColor(this.COLORS.clearColor)
         this.renderer.render(this.scene, this.camera)
+
+        this.renderer.setRenderTarget(null)
+        this.renderer.setClearColor(this.COLORS.outsideClearColor)
+        this.renderer.render(this.outsideScene, this.outsideCamera)
+        this.css3DRenderer.render(this.outsideScene, this.outsideCamera)
 
         requestAnimationFrame(this.animate.bind(this))
     }

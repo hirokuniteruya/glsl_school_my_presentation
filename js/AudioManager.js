@@ -27,10 +27,10 @@ export class AudioManager {
 
         Tone.loaded().then(() => {
             this.isReady = true
-            this.massive.start()
-            this.drums.start()
-            this.trilian.start()
-            this.isPlaying = true
+            // this.massive.start()
+            // this.drums.start()
+            // this.trilian.start()
+            // this.isPlaying = true
 })
 
         this.fftSize = 512

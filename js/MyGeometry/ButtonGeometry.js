@@ -14,23 +14,36 @@ class ButtonGeometry extends BufferGeometry {
             heightSegments, heightSegments
         }
 
+        const width_half   = width  / 2
         const borderRadius = height * 0.5
 
         //
 
         const indices  = []
         const vertices = []
+        const normals  = []
+        const uvs      = []
 
         for (let i = 0; i <= heightSegments; i++) {
 
             const rad = ( Math.PI / heightSegments ) * i
 
-            const x = width * 0.5 - borderRadius + borderRadius * Math.sin(rad)
-            const y = Math.cos(rad)
+            const x = width_half - borderRadius + borderRadius * Math.sin(rad)
+            const y = Math.cos(rad) * borderRadius
 
             vertices.push(
                  x, y, 0,
-                -x, y, 0,
+                -x, y, 0
+            )
+
+            normals.push(
+                0, 0, 1,
+                0, 0, 1
+            )
+
+            uvs.push(
+                (  x / width_half  + 1 ) / 2, ( y / width_half + 1 ) / 2,
+                ( -x / width_half  + 1 ) / 2, ( y / width_half + 1 ) / 2,
             )
 
         }
@@ -51,6 +64,8 @@ class ButtonGeometry extends BufferGeometry {
 
         this.setIndex(indices)
         this.setAttribute('position', new Float32BufferAttribute(vertices, 3))
+        this.setAttribute('normal',   new Float32BufferAttribute(normals,  3))
+        this.setAttribute('uv',       new Float32BufferAttribute(uvs,      2))
 
     }
 }

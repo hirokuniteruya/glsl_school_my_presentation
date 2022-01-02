@@ -49,17 +49,3 @@ canvas {
     color: rgba(113, 158, 255, 0.8);
     text-decoration: none;
 }
-
-#tone-monitor {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 200px;
-    /* min-height: 50px; */
-    padding: 24px;
-    background-color: #7774;
-    color: #ccc;
-    text-align: left;
-    font-family: monospace;
-    font-size: 1.1rem;
-}
