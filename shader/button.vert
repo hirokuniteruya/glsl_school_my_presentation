@@ -7,7 +7,7 @@
 // uniform mat4 projectionMatrix;
 // uniform mat4 normalMatrix;
 
-uniform float uScale;
+uniform float uTexScale;
 
 varying vec2 vPosition;
 
@@ -21,5 +21,5 @@ void main()
 
     gl_Position = projectedPosition;
 
-    vPosition = ( projectedPosition.xy / projectedPosition.w / uScale + 1. ) * .5;
+    vPosition = ( projectedPosition.xy / projectedPosition.w / uTexScale + 1. ) * .5;
 }

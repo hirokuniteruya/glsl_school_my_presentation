@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { CSS3DObject } from 'three/examples/jsm/renderers/CSS3DRenderer'
 import { BaseCanvas } from './libs/BaseCanvas'
+import { MyClock } from './libs/MyClock'
 import { ButtonGeometry } from './MyGeometry/ButtonGeometry'
 import { Pane } from 'tweakpane'
 import { gsap } from 'gsap'
@@ -24,7 +25,7 @@ export class Canvas extends BaseCanvas {
 
         this.dampedMouse = new THREE.Vector2()
 
-        this.camera.position.set(1.6, 1.6, 1.6)
+        this.camera.position.set(2, 2, 2)
 
         /**
          * Tweakpane
@@ -44,6 +45,14 @@ export class Canvas extends BaseCanvas {
          * Shader chunks
          */
         THREE.ShaderChunk['perlin_3d'] = perlin_3d
+
+        /**
+         * Global variables
+         */
+        this.isAnimating = false
+        /** @type {Array.<GSAPTween>} */
+        this.tweens = []
+        this.btnTl = null
 
         /**
          * Colors
@@ -177,8 +186,8 @@ export class Canvas extends BaseCanvas {
         /** memo
          * MeshBasicMaterial を使用した時、テクスチャのアス比の補正が必要。
          */
-        const buttonMesh = new THREE.Mesh(
-            new ButtonGeometry(4, 1.8, 32),
+        this.buttonMesh = new THREE.Mesh(
+            new ButtonGeometry(4, 1.4, 32),
             // new THREE.MeshBasicMaterial({
             //     color: 'white',
             //     map: this.renderTarget.texture,
@@ -188,14 +197,14 @@ export class Canvas extends BaseCanvas {
                 fragmentShader: button_fs,
                 uniforms: {
                     uTex: { value: this.renderTarget.texture },
-                    uScale: { value: .4 },
+                    uTexScale: { value: .4 },
                 }
             })
         )
-        this.outsideScene.add(buttonMesh)
+        this.outsideScene.add(this.buttonMesh)
 
         this.gui_button = this.gui.addFolder('button').open()
-        this.gui_button.add(buttonMesh.material.uniforms.uScale, 'value').min(0).max(1).step(0.001).name('uScale')
+        this.gui_button.add(this.buttonMesh.material.uniforms.uTexScale, 'value').min(0).max(1).step(0.001).name('uTexScale')
 
         /**
          * Text: play
@@ -211,13 +220,10 @@ export class Canvas extends BaseCanvas {
         this.outsideScene.add(this.textObject)
 
         /**
-         * Debug plane
+         * Raycaster
          */
-        this.debugPlane = new THREE.Mesh(
-            new THREE.PlaneGeometry(),
-            new THREE.MeshBasicMaterial({ map: this.renderTarget.texture })
-        )
-        // this.outsideScene.add(this.debugPlane)
+        this.raycaster = new THREE.Raycaster()
+        this.mouse.set(-1, 1)
 
         /**
          * Event listeners
@@ -235,7 +241,8 @@ export class Canvas extends BaseCanvas {
         })
         this.gui.addColor(this.COLORS, 'outsideClearColor')
 
-        this.clock = new THREE.Clock()
+        this.clock = new MyClock(false)
+        this.isFirstFrame = true
         this.animate()
     }
 
@@ -246,9 +253,27 @@ export class Canvas extends BaseCanvas {
     {
         this.controls.update()
 
-        const elapsedTime = this.clock.getElapsedTime()
+        if (this.isFirstFrame) {
+            this.isFirstFrame = false
+        } else {
+            // レイキャスター
+            this.raycaster.setFromCamera(this.mouse, this.outsideCamera)
+            const intersects = this.raycaster.intersectObjects(this.outsideScene.children)
 
-        // this.mouseUpdate()
+            if(intersects.length > 0) {
+                if(this.isAnimating === false) {
+                    this.onMouseenter()
+                    this.isAnimating = true
+                }
+            } else {
+                if(this.isAnimating === true) {
+                    this.onMouseleave()
+                    this.isAnimating = false
+                }
+            }
+        }
+
+        const elapsedTime = this.clock.getElapsedTime()
 
         let amplitudes = this.audioManager.getAmplitudes()
 
@@ -267,12 +292,14 @@ export class Canvas extends BaseCanvas {
 
         this.sea.material.uniforms.uTime.value = elapsedTime
 
-        this.objectsAround.rotation.y += 0.001
+        this.objectsAround.rotation.y = elapsedTime * 0.1
 
+        // メインシーンの描画
         this.renderer.setRenderTarget(this.renderTarget)
         this.renderer.setClearColor(this.COLORS.clearColor)
         this.renderer.render(this.scene, this.camera)
 
+        // 外界の描画（ボタン）
         this.renderer.setRenderTarget(null)
         this.renderer.setClearColor(this.COLORS.outsideClearColor)
         this.renderer.render(this.outsideScene, this.outsideCamera)
@@ -280,6 +307,28 @@ export class Canvas extends BaseCanvas {
 
         requestAnimationFrame(this.animate.bind(this))
     }
+
+    onMouseenter()
+    {
+        this.tweens.forEach(tween => tween.resume())
+        this.clock.resume()
+        this.btnTl && this.btnTl.kill()
+        this.btnTl = gsap.timeline({defaults: { duration: 1, ease: 'power3.out' }})
+            .to(this.buttonMesh.material.uniforms.uTexScale, { value: .6 })
+            .to(this.buttonMesh.scale, { x: 1.2, y: 1.2 }, '<')
+        document.body.style.cursor = "pointer"
+    }
+
+    onMouseleave()
+    {
+        this.tweens.forEach(tween => tween.pause())
+        this.clock.stop()
+        this.btnTl && this.btnTl.kill()
+        gsap.timeline({defaults: { duration: .5, ease: 'power3.out' }})
+            .to(this.buttonMesh.material.uniforms.uTexScale, { value: .4 })
+            .to(this.buttonMesh.scale, { x: 1, y: 1 }, '<')
+        document.body.style.cursor = "auto"
+        }
 
     mouseUpdate()
     {
@@ -319,14 +368,17 @@ export class Canvas extends BaseCanvas {
 
             meshesArray.push(mesh)
 
-            gsap.to(mesh.position, {
+            const tween = gsap.to(mesh.position, {
                 y: "+=.1",
                 duration: 3,
                 delay: animationDelay,
                 repeat: -1,
                 yoyo: true,
                 ease: 'sine.inOut',
+                paused: true,
             })
+
+            this.tweens.push(tween)
         }
     }
 }
