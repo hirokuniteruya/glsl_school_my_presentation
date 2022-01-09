@@ -5,10 +5,10 @@ import { ButtonGeometry } from './MyGeometry/ButtonGeometry'
 import { Pane } from 'tweakpane'
 import { gsap } from 'gsap'
 import perlin_3d from '../shader/chunk/perlin_3d.glsl?raw'
-import main_vs   from '../shader/main.vert?raw'
-import main_fs   from '../shader/main.frag?raw'
 import sea_vs    from '../shader/sea.vert?raw'
 import sea_fs    from '../shader/sea.frag?raw'
+import button_vs from '../shader/button.vert?raw'
+import button_fs from '../shader/button.frag?raw'
 
 export class Canvas extends BaseCanvas {
     constructor(audioManager)
@@ -90,8 +90,8 @@ export class Canvas extends BaseCanvas {
         this.scene.add(this.sea)
 
         const seaUniforms = this.sea.material.uniforms
-        this.gui_sea = this.gui.addFolder('sea')
-        this.gui_bigWaves = this.gui_sea.addFolder('uBigWaves')
+        this.gui_sea        = this.gui.addFolder('sea').close()
+        this.gui_bigWaves   = this.gui_sea.addFolder('uBigWaves')
         this.gui_smallWaves = this.gui_sea.addFolder('uSmallWaves')
 
         this.gui_bigWaves.add(seaUniforms.uBigWavesElevation, 'value').min(0).max(.1).step(0.001).name('uBigWavesElevation')
@@ -174,14 +174,28 @@ export class Canvas extends BaseCanvas {
         /**
          * Button
          */
+        /** memo
+         * MeshBasicMaterial を使用した時、テクスチャのアス比の補正が必要。
+         */
         const buttonMesh = new THREE.Mesh(
             new ButtonGeometry(4, 1.8, 32),
-            new THREE.MeshBasicMaterial({
-                color: 'white',
-                map: this.renderTarget.texture,
+            // new THREE.MeshBasicMaterial({
+            //     color: 'white',
+            //     map: this.renderTarget.texture,
+            // })
+            new THREE.ShaderMaterial({
+                vertexShader: button_vs,
+                fragmentShader: button_fs,
+                uniforms: {
+                    uTex: { value: this.renderTarget.texture },
+                    uScale: { value: .4 },
+                }
             })
         )
         this.outsideScene.add(buttonMesh)
+
+        this.gui_button = this.gui.addFolder('button').open()
+        this.gui_button.add(buttonMesh.material.uniforms.uScale, 'value').min(0).max(1).step(0.001).name('uScale')
 
         /**
          * Text: play
@@ -203,7 +217,7 @@ export class Canvas extends BaseCanvas {
             new THREE.PlaneGeometry(),
             new THREE.MeshBasicMaterial({ map: this.renderTarget.texture })
         )
-        this.outsideScene.add(this.debugPlane)
+        // this.outsideScene.add(this.debugPlane)
 
         /**
          * Event listeners
@@ -280,6 +294,13 @@ export class Canvas extends BaseCanvas {
         super.onResize()
     }
 
+    /**
+     * 引数で渡された Mesh を複製して、球体の周囲を取り囲む Mesh 群を作成します。
+     * @param {THREE.Mesh} originalMesh 原型となるMeshオブジェクト
+     * @param {Array} meshesArray Meshを格納する為の空の配列
+     * @param {number} radianOffset 角度のオフセット
+     * @param {number} animationDelay 浮遊アニメーションの遅延[s]
+     */
     createSurroundingObjects(originalMesh, meshesArray, radianOffset, animationDelay)
     {
         for (let i = 0; i < 4; i++) {
