@@ -272,6 +272,7 @@ export class Canvas extends BaseCanvas {
         this.controls.update()
 
         if (this.isFirstFrame) {
+            // 何故か最初のフレームで this.intersects.length > 0 となる事象への対応
             this.isFirstFrame = false
         } else if(!this.isMainWorld) {
             // レイキャスター
