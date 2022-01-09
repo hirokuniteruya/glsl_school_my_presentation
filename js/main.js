@@ -5,3 +5,7 @@ import { AudioManager } from './AudioManager'
 const audioManager = new AudioManager()
 
 new Canvas(audioManager)
+
+// document.getElementById('sound-test-btn').addEventListener('click', () => {
+//     audioManager.doSoundTest()
+// })

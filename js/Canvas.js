@@ -10,6 +10,7 @@ import sea_vs    from '../shader/sea.vert?raw'
 import sea_fs    from '../shader/sea.frag?raw'
 import button_vs from '../shader/button.vert?raw'
 import button_fs from '../shader/button.frag?raw'
+import playText  from '../image/play-text.png'
 
 export class Canvas extends BaseCanvas {
     constructor(audioManager)
@@ -22,6 +23,8 @@ export class Canvas extends BaseCanvas {
         })
 
         this.audioManager = audioManager
+        console.log('this.audioManager: ', this.audioManager);
+        this.gui.add( this.audioManager, 'doSoundTest' ).name('サウンドテスト')
 
         this.dampedMouse = new THREE.Vector2()
 
@@ -30,16 +33,16 @@ export class Canvas extends BaseCanvas {
         /**
          * Tweakpane
          */
-        const pane = new Pane({ container: document.getElementById('float-layer') })
-        this.PARAMS = {
-            volume: 0,
-        }
-        pane.addMonitor(this.PARAMS, 'volume', {
-            interval: 16,
-            view: 'graph',
-            min: 0,
-            max: 0.5,
-        })
+        // const pane = new Pane({ container: document.getElementById('float-layer') })
+        // this.PARAMS = {
+        //     volume: 0,
+        // }
+        // pane.addMonitor(this.PARAMS, 'volume', {
+        //     interval: 16,
+        //     view: 'graph',
+        //     min: 0,
+        //     max: 0.5,
+        // })
 
         /**
          * Shader chunks
@@ -49,7 +52,8 @@ export class Canvas extends BaseCanvas {
         /**
          * Global variables
          */
-        this.isAnimating = false
+        this.isMousehovered = false
+        this.isMainWorld = false
         /** @type {Array.<GSAPTween>} */
         this.tweens = []
         this.btnTl = null
@@ -188,22 +192,19 @@ export class Canvas extends BaseCanvas {
          */
         this.buttonMesh = new THREE.Mesh(
             new ButtonGeometry(4, 1.4, 32),
-            // new THREE.MeshBasicMaterial({
-            //     color: 'white',
-            //     map: this.renderTarget.texture,
-            // })
             new THREE.ShaderMaterial({
                 vertexShader: button_vs,
                 fragmentShader: button_fs,
                 uniforms: {
                     uTex: { value: this.renderTarget.texture },
                     uTexScale: { value: .4 },
+                    uDarkness: { value: .5 },
                 }
             })
         )
         this.outsideScene.add(this.buttonMesh)
 
-        this.gui_button = this.gui.addFolder('button').open()
+        this.gui_button = this.gui.addFolder('PlayButton').close()
         this.gui_button.add(this.buttonMesh.material.uniforms.uTexScale, 'value').min(0).max(1).step(0.001).name('uTexScale')
 
         /**
@@ -217,12 +218,28 @@ export class Canvas extends BaseCanvas {
         textEl.style.pointerEvents = 'none' // 何故か効かない
         this.textObject = new CSS3DObject(textEl)
         this.textObject.scale.multiplyScalar(0.08)
-        this.outsideScene.add(this.textObject)
+        // this.outsideScene.add(this.textObject)
+
+        this.textTexture = this.textureLoader.load(playText)
+        this.textTexture.minFilter = THREE.LinearFilter
+        this.textTexture.magFilter = THREE.LinearFilter
+        this.textTexture.format = THREE.RGBAFormat
+
+        this.textMesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(2, 1),
+            new THREE.MeshBasicMaterial({
+                map: this.textTexture,
+                transparent: true,
+            })
+        )
+        this.textMesh.scale.setScalar(.8)
+        this.outsideScene.add(this.textMesh)
 
         /**
          * Raycaster
          */
         this.raycaster = new THREE.Raycaster()
+        this.intersects = null
         this.mouse.set(-1, 1)
 
         /**
@@ -230,6 +247,7 @@ export class Canvas extends BaseCanvas {
          */
         window.addEventListener('mousemove', this.getNormalizedMousePosition.bind(this))
         window.addEventListener('resize', this.onResize.bind(this))
+        window.addEventListener('mouseup', this.onMouseup.bind(this))
 
         /**
          * Renderer settings
@@ -255,31 +273,31 @@ export class Canvas extends BaseCanvas {
 
         if (this.isFirstFrame) {
             this.isFirstFrame = false
-        } else {
+        } else if(!this.isMainWorld) {
             // レイキャスター
             this.raycaster.setFromCamera(this.mouse, this.outsideCamera)
-            const intersects = this.raycaster.intersectObjects(this.outsideScene.children)
+            this.intersects = this.raycaster.intersectObjects(this.outsideScene.children)
 
-            if(intersects.length > 0) {
-                if(this.isAnimating === false) {
+            if(this.intersects.length > 0) {
+                if(this.isMousehovered === false) {
                     this.onMouseenter()
-                    this.isAnimating = true
+                    this.isMousehovered = true
                 }
             } else {
-                if(this.isAnimating === true) {
+                if(this.isMousehovered === true) {
                     this.onMouseleave()
-                    this.isAnimating = false
+                    this.isMousehovered = false
                 }
             }
         }
 
         const elapsedTime = this.clock.getElapsedTime()
 
+        // 音量の取得
         let amplitudes = this.audioManager.getAmplitudes()
+        // this.PARAMS.volume = amplitudes[0] // monitor on tweakpane
 
-        this.PARAMS.volume = amplitudes[0]
-        this.sea.material.uniforms.uSynthAmplitude.value = amplitudes[0]
-
+        // 周囲を取り囲むオブジェクトへ音量を作用させる
         for (const obj of this.cylinders) {
             obj.scale.setScalar(1 + amplitudes[0])
         }
@@ -290,6 +308,7 @@ export class Canvas extends BaseCanvas {
             obj.scale.setScalar(1 + amplitudes[2])
         }
 
+        this.sea.material.uniforms.uSynthAmplitude.value = amplitudes[0]
         this.sea.material.uniforms.uTime.value = elapsedTime
 
         this.objectsAround.rotation.y = elapsedTime * 0.1
@@ -303,7 +322,7 @@ export class Canvas extends BaseCanvas {
         this.renderer.setRenderTarget(null)
         this.renderer.setClearColor(this.COLORS.outsideClearColor)
         this.renderer.render(this.outsideScene, this.outsideCamera)
-        this.css3DRenderer.render(this.outsideScene, this.outsideCamera)
+        // this.css3DRenderer.render(this.outsideScene, this.outsideCamera)
 
         requestAnimationFrame(this.animate.bind(this))
     }
@@ -315,7 +334,9 @@ export class Canvas extends BaseCanvas {
         this.btnTl && this.btnTl.kill()
         this.btnTl = gsap.timeline({defaults: { duration: 1, ease: 'power3.out' }})
             .to(this.buttonMesh.material.uniforms.uTexScale, { value: .6 })
+            .to(this.buttonMesh.material.uniforms.uDarkness, { value: .1, duration: .5 }, '<')
             .to(this.buttonMesh.scale, { x: 1.2, y: 1.2 }, '<')
+            .to(this.textMesh.scale, { x: 1, y: 1 }, '<')
         document.body.style.cursor = "pointer"
     }
 
@@ -324,19 +345,46 @@ export class Canvas extends BaseCanvas {
         this.tweens.forEach(tween => tween.pause())
         this.clock.stop()
         this.btnTl && this.btnTl.kill()
-        gsap.timeline({defaults: { duration: .5, ease: 'power3.out' }})
+        this.btnTl = gsap.timeline({defaults: { duration: .5, ease: 'power3.out' }})
             .to(this.buttonMesh.material.uniforms.uTexScale, { value: .4 })
+            .to(this.buttonMesh.material.uniforms.uDarkness, { value: .5 }, '<')
             .to(this.buttonMesh.scale, { x: 1, y: 1 }, '<')
+            .to(this.textMesh.scale, { x: .8, y: .8 }, '<')
         document.body.style.cursor = "auto"
-        }
-
-    mouseUpdate()
-    {
-        const smoothness = .1
-
-        this.dampedMouse.x += ( this.mouse.x * this.sizes.aspect * 2 - this.dampedMouse.x ) * smoothness
-        this.dampedMouse.y += ( this.mouse.y * 2 - this.dampedMouse.y ) * smoothness
     }
+
+    onMouseup()
+    {
+        if(this.intersects.length > 0 && !this.isMainWorld) this.enterToMainWorld()
+    }
+
+    enterToMainWorld()
+    {
+        this.btnTl = gsap.timeline({defaults: { duration: 1.5, ease: 'power3.out' }})
+            .to(this.buttonMesh.material.uniforms.uTexScale, { value: 1 })
+            .to(this.buttonMesh.material.uniforms.uDarkness, { value: 0, duration: .5 }, '<')
+            .to(this.buttonMesh.scale, { x: 5, y: 5 }, '<')
+            .to(this.textMesh.position, { z: 10 }, '<')
+            .to(this.textMesh.material, { opacity: 0, duration: .2 }, '<')
+            .to(this.camera.position, { x: 1.8, y: 1, z: 1.8 }, '<')
+
+        document.body.style.cursor = "auto"
+
+        this.isMainWorld = true
+
+        // 音声再生する処理をここに入れる。
+        setTimeout(() => {
+            this.audioManager.startAll()
+        }, 500);
+    }
+
+    // mouseUpdate()
+    // {
+    //     const smoothness = .1
+
+    //     this.dampedMouse.x += ( this.mouse.x * this.sizes.aspect * 2 - this.dampedMouse.x ) * smoothness
+    //     this.dampedMouse.y += ( this.mouse.y * 2 - this.dampedMouse.y ) * smoothness
+    // }
 
     onResize()
     {

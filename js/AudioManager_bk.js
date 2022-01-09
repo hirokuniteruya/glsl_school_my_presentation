@@ -9,16 +9,6 @@ export class AudioManager {
         this.isReady   = false
         this.isPlaying = false
 
-        // test
-        this.testSynth = new Tone.MonoSynth({
-            oscillator: {
-                type: "square"
-            },
-            envelope: {
-                attack: 0.1
-            }
-        }).toDestination();
-
         this.massive = new Tone.Player({
             url: MassiveX,
             loop: true,
@@ -34,6 +24,9 @@ export class AudioManager {
             url: Trilian,
             loop: true,
         }).toDestination()
+
+        // debug
+        console.log('this.massive.autostart: ', this.massive.autostart)
 
         Tone.loaded().then(() => {
             this.isReady = true
@@ -53,14 +46,15 @@ export class AudioManager {
 
         window.addEventListener('keydown', ev => {
             if (ev.key === 'Escape') {
-                this.isPlaying ? this.stopAll() : this.startAll()
+                if(this.isPlaying) {
+                    this.stopAll()
+                } else {
+                    this.startAll()
+                }
             }
         })
     }
 
-    /**
-     * 全ての楽器の再生を開始します。
-     */
     startAll()
     {
         this.massive.start()
@@ -69,9 +63,6 @@ export class AudioManager {
         this.isPlaying = true
     }
 
-    /**
-     * 全ての楽器の再生を停止します。
-     */
     stopAll()
     {
         this.massive.stop()
@@ -95,10 +86,5 @@ export class AudioManager {
         })
 
         return amplitudes
-    }
-
-    doSoundTest()
-    {
-        this.testSynth.triggerAttackRelease("C4", "4n");
     }
 }

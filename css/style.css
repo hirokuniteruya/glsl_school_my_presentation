@@ -49,3 +49,28 @@ canvas {
     color: rgba(113, 158, 255, 0.8);
     text-decoration: none;
 }
+
+/* .navigator {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    padding: 16px;
+    border-radius: 4px;
+    background: black;
+    color: #fff8;
+    font-size: 14px;
+    font-family: 'Roboto Mono', 'Source Code Pro', 'Menlo', Courier, monospace;
+
+    transform: translateX(-90%);
+    transition: transform .5s;
+}
+.navigator:hover {
+    transform: translateX(0);
+}
+
+#sound-test-btn {
+    padding: 8px;
+    border-radius: 0;
+    border: none;
+    cursor: pointer;
+} */
