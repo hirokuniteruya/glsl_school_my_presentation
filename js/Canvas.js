@@ -210,16 +210,6 @@ export class Canvas extends BaseCanvas {
         /**
          * Text: play
          */
-        const textEl = document.createElement('p')
-        textEl.innerText = 'PLAY'
-        textEl.style.fontSize = '10px'
-        textEl.style.color = 'white'
-        textEl.style.fontFamily = 'Poppins'
-        textEl.style.pointerEvents = 'none' // 何故か効かない
-        this.textObject = new CSS3DObject(textEl)
-        this.textObject.scale.multiplyScalar(0.08)
-        // this.outsideScene.add(this.textObject)
-
         this.textTexture = this.textureLoader.load(playText)
         this.textTexture.minFilter = THREE.LinearFilter
         this.textTexture.magFilter = THREE.LinearFilter
@@ -323,7 +313,6 @@ export class Canvas extends BaseCanvas {
         this.renderer.setRenderTarget(null)
         this.renderer.setClearColor(this.COLORS.outsideClearColor)
         this.renderer.render(this.outsideScene, this.outsideCamera)
-        // this.css3DRenderer.render(this.outsideScene, this.outsideCamera)
 
         requestAnimationFrame(this.animate.bind(this))
     }
