@@ -223,7 +223,7 @@ export class Canvas extends BaseCanvas {
                 transparent: true,
             })
         )
-        this.textMesh.scale.setScalar(.8)
+        this.textMesh.scale.setScalar(.7)
         this.outsideScene.add(this.textMesh)
 
         /**
@@ -326,7 +326,7 @@ export class Canvas extends BaseCanvas {
             .to(this.buttonMesh.material.uniforms.uTexScale, { value: .6 })
             .to(this.buttonMesh.material.uniforms.uDarkness, { value: .1, duration: .5 }, '<')
             .to(this.buttonMesh.scale, { x: 1.2, y: 1.2 }, '<')
-            .to(this.textMesh.scale, { x: 1, y: 1 }, '<')
+            .to(this.textMesh.scale, { x: .9, y: .9 }, '<')
             .to(this.buttonMesh.material.uniforms.uMouseEffect, { value: .3, duration: .5 }, '<')
         document.body.style.cursor = "pointer"
     }
@@ -340,7 +340,7 @@ export class Canvas extends BaseCanvas {
             .to(this.buttonMesh.material.uniforms.uTexScale, { value: .4 })
             .to(this.buttonMesh.material.uniforms.uDarkness, { value: .5 }, '<')
             .to(this.buttonMesh.scale, { x: 1, y: 1 }, '<')
-            .to(this.textMesh.scale, { x: .8, y: .8 }, '<')
+            .to(this.textMesh.scale, { x: .7, y: .7 }, '<')
             .to(this.buttonMesh.material.uniforms.uMouseEffect, { value: 1 }, '<')
         document.body.style.cursor = "auto"
     }
