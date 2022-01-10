@@ -187,9 +187,6 @@ export class Canvas extends BaseCanvas {
         /**
          * Button
          */
-        /** memo
-         * MeshBasicMaterial を使用した時、テクスチャのアス比の補正が必要。
-         */
         this.buttonMesh = new THREE.Mesh(
             new ButtonGeometry(4, 1.4, 32),
             new THREE.ShaderMaterial({
@@ -199,6 +196,10 @@ export class Canvas extends BaseCanvas {
                     uTex: { value: this.renderTarget.texture },
                     uTexScale: { value: .4 },
                     uDarkness: { value: .5 },
+                    uTime: { value: 0 },
+                    uMouse: { value: this.mouse },
+                    uMouseEffect: { value: 1 },
+                    uAspect: { value: this.sizes.aspect }
                 }
             })
         )
@@ -242,11 +243,8 @@ export class Canvas extends BaseCanvas {
         /**
          * Renderer settings
          */
-        // this.renderer.autoClearColor = false
         this.renderer.setClearColor(this.COLORS.clearColor)
-        this.gui.addColor(this.COLORS, 'clearColor').onChange(() => {
-            this.renderer.setClearColor(this.COLORS.clearColor)
-        })
+        this.gui.addColor(this.COLORS, 'clearColor')
         this.gui.addColor(this.COLORS, 'outsideClearColor')
 
         this.clock = new MyClock(false)
@@ -299,10 +297,12 @@ export class Canvas extends BaseCanvas {
             obj.scale.setScalar(1 + amplitudes[2])
         }
 
+        this.objectsAround.rotation.y = elapsedTime * 0.1
+
+        /* 各 uniform 変数の更新 */
         this.sea.material.uniforms.uSynthAmplitude.value = amplitudes[0]
         this.sea.material.uniforms.uTime.value = elapsedTime
-
-        this.objectsAround.rotation.y = elapsedTime * 0.1
+        this.buttonMesh.material.uniforms.uTime.value = elapsedTime
 
         // メインシーンの描画
         this.renderer.setRenderTarget(this.renderTarget)
@@ -327,6 +327,7 @@ export class Canvas extends BaseCanvas {
             .to(this.buttonMesh.material.uniforms.uDarkness, { value: .1, duration: .5 }, '<')
             .to(this.buttonMesh.scale, { x: 1.2, y: 1.2 }, '<')
             .to(this.textMesh.scale, { x: 1, y: 1 }, '<')
+            .to(this.buttonMesh.material.uniforms.uMouseEffect, { value: .3, duration: .5 }, '<')
         document.body.style.cursor = "pointer"
     }
 
@@ -340,6 +341,7 @@ export class Canvas extends BaseCanvas {
             .to(this.buttonMesh.material.uniforms.uDarkness, { value: .5 }, '<')
             .to(this.buttonMesh.scale, { x: 1, y: 1 }, '<')
             .to(this.textMesh.scale, { x: .8, y: .8 }, '<')
+            .to(this.buttonMesh.material.uniforms.uMouseEffect, { value: 1 }, '<')
         document.body.style.cursor = "auto"
     }
 
@@ -357,6 +359,7 @@ export class Canvas extends BaseCanvas {
             .to(this.textMesh.position, { z: 10 }, '<')
             .to(this.textMesh.material, { opacity: 0, duration: .2 }, '<')
             .to(this.camera.position, { x: 1.8, y: 1, z: 1.8 }, '<')
+            .to(this.buttonMesh.material.uniforms.uMouseEffect, { value: 0 }, '<')
 
         document.body.style.cursor = "auto"
 
