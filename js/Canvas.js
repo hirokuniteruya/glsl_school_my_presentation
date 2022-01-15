@@ -287,10 +287,10 @@ export class Canvas extends BaseCanvas {
 
         // 周囲を取り囲むオブジェクトへ音量を作用させる
         for (const obj of this.cylinders) {
-            obj.scale.setScalar(1 + amplitudes[0] * 1.5)
+            obj.scale.setScalar(1 + amplitudes[0] * 1.2)
         }
         for (const obj of this.spheres) {
-            obj.scale.setScalar(1 + amplitudes[1] * 2)
+            obj.scale.setScalar(1 + amplitudes[1] * 1.2)
         }
         for (const obj of this.cones) {
             obj.scale.setScalar(1 + amplitudes[2])
