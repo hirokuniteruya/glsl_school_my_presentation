@@ -1,5 +1,4 @@
 import * as THREE from 'three'
-import { CSS3DObject } from 'three/examples/jsm/renderers/CSS3DRenderer'
 import { BaseCanvas } from './libs/BaseCanvas'
 import { MyClock } from './libs/MyClock'
 import { ButtonGeometry } from './MyGeometry/ButtonGeometry'
@@ -288,10 +287,10 @@ export class Canvas extends BaseCanvas {
 
         // 周囲を取り囲むオブジェクトへ音量を作用させる
         for (const obj of this.cylinders) {
-            obj.scale.setScalar(1 + amplitudes[0])
+            obj.scale.setScalar(1 + amplitudes[0] * 1.5)
         }
         for (const obj of this.spheres) {
-            obj.scale.setScalar(1 + amplitudes[1])
+            obj.scale.setScalar(1 + amplitudes[1] * 2)
         }
         for (const obj of this.cones) {
             obj.scale.setScalar(1 + amplitudes[2])
@@ -386,10 +385,10 @@ export class Canvas extends BaseCanvas {
 
     /**
      * 引数で渡された Mesh を複製して、球体の周囲を取り囲む Mesh 群を作成します。
-     * @param {THREE.Mesh} originalMesh 原型となるMeshオブジェクト
-     * @param {Array} meshesArray Meshを格納する為の空の配列
-     * @param {number} radianOffset 角度のオフセット
-     * @param {number} animationDelay 浮遊アニメーションの遅延[s]
+     * @param {THREE.Mesh} originalMesh - 原型となるMeshオブジェクト
+     * @param {Array} meshesArray - Meshを格納する為の空の配列
+     * @param {number} radianOffset - 角度のオフセット
+     * @param {number} animationDelay - 浮遊アニメーションの遅延[s]
      */
     createSurroundingObjects(originalMesh, meshesArray, radianOffset, animationDelay)
     {
